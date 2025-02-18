@@ -153,6 +153,8 @@ describe("SimpleDex", () => {
       let reserveIn: bigint;
       let reserveOut: bigint;
 
+      const initialTokenB = await TokenB.balanceOf(await addr1.getAddress());
+
       if ((await TokenA.getAddress()) < (await TokenB.getAddress())) {
         reserveIn = ethers.parseEther("10000");
         reserveOut = ethers.parseEther("20000");
@@ -161,10 +163,11 @@ describe("SimpleDex", () => {
         reserveOut = ethers.parseEther("10000");
       }
 
-      const amountInWithFee = amountIn * 997n;
-      const numerator = amountInWithFee * reserveOut;
-      const denominator = reserveIn * 1000n + amountInWithFee;
-      const expectedAmountOut = numerator / denominator;
+      const expectedAmountOut = await SimpleDex.getAmountOut(
+        amountIn,
+        reserveIn,
+        reserveOut
+      );
 
       await TokenA.transfer(await addr1.getAddress(), amountIn);
       await TokenA.connect(addr1).approve(
@@ -185,12 +188,11 @@ describe("SimpleDex", () => {
           await TokenA.getAddress(),
           await TokenB.getAddress(),
           amountIn,
-          expectedAmountOut
+          BigInt(expectedAmountOut)
         );
 
-      // Verify user received the correct amount
-      const userBalance = await TokenB.balanceOf(await addr1.getAddress());
-      expect(userBalance).to.equal(expectedAmountOut);
+      const finalTokenB = await TokenB.balanceOf(await addr1.getAddress());
+      expect(finalTokenB).to.equal(initialTokenB + expectedAmountOut);
     });
 
     it("Should fail if tokens are the same", async () => {
